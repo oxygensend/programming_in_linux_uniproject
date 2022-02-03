@@ -17,10 +17,10 @@ struct __attribute__((__packed__)) Record{
 
 
 // Function to get int from char *
-short getInt(char *str){
+short getShort(char *str){
 
     char * endptr;
-    int x = strtol(str, &endptr,10);
+    short x = (short)strtol(str, &endptr,10);
     if(*endptr){
         perror("Bad number format, gives 2 bytes number");
         return -1;
@@ -36,22 +36,21 @@ int getBytes(char *str){
     if(str[strlen(str)-1] == 'M'){
         char subbuff[strlen(str)-1];
         memcpy( subbuff, str, strlen(str)-1 );
-        x = getInt(subbuff) * 1024 * 1024;
+        x = getShort(subbuff) * 1024 * 1024;
     }
     else if( str[strlen(str)-1] == 'K'){
         char subbuff[strlen(str)-1];
         memcpy( subbuff, str, strlen(str)-1 );
-        x = getInt(subbuff)  * 1024;
+        x = getShort(subbuff)  * 1024;
     }
     else {
-        x = getInt(str);
+        x = getShort(str);
     }
         
     return x;
 
 
 }
-
 
 
 // Check if value is already in array
@@ -85,7 +84,7 @@ int main(int argc, char **argv){
  if( argc != 2 ){
 
             perror("Program needs argument");
-            return(11);
+            return 11;
         }
 
 
@@ -104,12 +103,13 @@ int main(int argc, char **argv){
     short x;
     int j = 0;
     dup2(fd,0);
-    
+        
 
     while(j<nSize){
 
         //short bytes_read = fread(&x, sizeof(short), 1, stdin);
 
+        fflush(stdin);
         fscanf(stdin, "%hd", &x);
         
         records[j].duplicated = isInArray(x,records) ? 1 : 0;
@@ -119,6 +119,7 @@ int main(int argc, char **argv){
         j++;
 
     }
+    
 
     int temp = 0;
     for(int i=0;i<nSize;i++){
