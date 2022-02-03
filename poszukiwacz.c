@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
 struct __attribute__((__packed__)) Record{
 
     short    value;
@@ -14,7 +15,6 @@ struct __attribute__((__packed__)) Record{
 }Record;
 
 
-struct Record record;
 
 // Function to get int from char *
 short getInt(char *str){
@@ -53,18 +53,8 @@ int getBytes(char *str){
 }
 
 
-int writeData(int fd, pid_t process_pid, short value){
 
-    record.value = value;
-    record.process_pid = process_pid;
-
-   if(write(fd,&record, sizeof(struct Record)) == -1){
-       printf("Erorr occured while wirting data");
-       return 11;
-   } error: array size missing in ‘records’
-
-}
-
+// Check if value is already in array
 int isInArray(short x, struct Record* records){
 
     for(int i=0;i<sizeof(records);i++){
@@ -74,51 +64,74 @@ int isInArray(short x, struct Record* records){
     return 0;
 }
 
+// Returns value depending on the number of duplicates
+int returnValue(int duplicated){
+
+    if(!duplicated)
+        return 0;
+    else if(duplicated >=1 && duplicated <= 10)
+        return 1;
+
+    for(int i=1;i<10;i++){
+        if(duplicated >= ( i*10 + 1) && duplicated <= (i+1)*10)
+            return i;
+    }
+
+}
+
 int main(int argc, char **argv){
 
 
- // if( argc != 2 ){
+ if( argc != 2 ){
 
-        //     perror("Program needs argument");
-        //     return(11);
-        // }
+            perror("Program needs argument");
+            return(11);
+        }
 
 
 
-    int bytes = getBytes("4");
-
-    struct Record records[bytes/2];
+    int bytes = getBytes(argv[1]);
+    int nSize = bytes/2;
+    struct Record records[nSize];
 
    // mkfifo("test_fifo", 0777);
-    while(1){
-        int fd = open("test_fifo", O_RDONLY);
-        if(fd == -1){
-            perror("Failed to open fifo");
-        }
-        else {
-
-            short x;
-            int i = 0;
-            dup2(fd,0);
-           
-
-
-                int bytes_read = fread(&x, sizeof(int), 1, stdin);
-                fscanf(stdin, "%hd", &x);
-                
-                printf("b-%d r-%d\n", bytes_read, 1
-                );
-                printf("%d\n",x);
-                i++;
-
-
-                record.value = x;
-                record.process_pid = getpid();
-                record.duplicated = isInArray(x,records) ? 1 : 0;
-                records[i] = record;
-
-
-
-        }
+    int fd = open("test_fifo", O_RDONLY);
+    if(fd == -1){
+        perror("Failed to open fifo");
+        return 11;
     }
+
+    short x;
+    int j = 0;
+    dup2(fd,0);
+    
+
+    while(j<nSize){
+
+        //short bytes_read = fread(&x, sizeof(short), 1, stdin);
+
+        fscanf(stdin, "%hd", &x);
+        
+        records[j].duplicated = isInArray(x,records) ? 1 : 0;
+        records[j].value = x;
+        records[j].process_pid = getpid();
+
+        j++;
+
+    }
+
+    int temp = 0;
+    for(int i=0;i<nSize;i++){
+
+        if(records[i].duplicated == 0){
+            printf("%hd\t%d\n", records[i].value, records[i].process_pid);
+            temp++;
+        }
+        
+    }
+
+    int duplicated = (nSize - temp);
+
+    return(returnValue(duplicated));
+
 }
