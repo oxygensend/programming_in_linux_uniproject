@@ -8,25 +8,41 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <time.h>
+
+struct  Record{
+
+    short    value;
+    pid_t    process_pid;
+
+}Record;
 
 
 
 // flags definition
+int flag_d;
+int flag_s;
+int flag_w;
+int flag_f;
+int flag_l;
+int flag_p;
 
- int flag_d;
- int flag_s;
- int flag_w;
- int flag_f;
- int flag_l;
- int flag_p;
-
+int bytes_data_file;
+char * bytes_for_process;
+int children_n;
+char * file_success;
+char * file_raports;
+char * file_data;
+struct stat   buffer;   
 // Function to get int from char *
-short getShort(char * str);
+int getInt(char * str);
 
 // Function to get size of bytes that have to be read
 int getBytes(char * str);
 int readFlags(char c);
 int checkFlags();
+int copyData(int src, int dst);
 
 
 
