@@ -64,17 +64,18 @@ int isInArray(short x, struct Record* records){
 }
 
 // Returns value depending on the number of duplicates
-int returnValue(int duplicated){
+int returnValue(double duplicated){
 
     if(!duplicated)
         return 0;
     else if(duplicated >0 && duplicated <= 0.1)
         return 1;
     else if( duplicated > 1)
+        return 10;
 
-    for(int i=0.1;i<1;i+=0.1){
+    for(double i=0.1;i<1;i+=0.1){
         if(duplicated > i && duplicated <= i+0.1)
-            return i;
+            return i*10;
     }
 
 }
@@ -111,7 +112,7 @@ int main(int argc, char **argv){
     for(int i=0;i<nSize;i++){
         //short bytes_read = fread(&x, sizeof(short), 1, stdin);
 
-        // fflush(stdin);
+        //fflush(stdin);
         fscanf(stdin, "%hd", &x);
         
         if(!isInArray(x,records)){
@@ -133,7 +134,7 @@ int main(int argc, char **argv){
         
     
 
-    int duplicated = (nSize - temp) / nSize;
+    double duplicated = (nSize - temp) / (double)nSize;
 
     return(returnValue(duplicated));
 

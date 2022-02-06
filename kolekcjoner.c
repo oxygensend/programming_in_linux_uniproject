@@ -173,5 +173,13 @@ void nsleep(float sec){
 }
 
 
+void writeSuccess(int offset, int fd_r, int fd_w, pid_t pid){
 
+    pid_t temp;
+    lseek(fd_r,offset,SEEK_SET);
+    read(fd_r,&temp, sizeof(pid_t));
+    lseek(fd_w,offset,SEEK_SET);
+    if(!temp)
+        write(fd_w, &pid ,sizeof(pid_t));
+}
 
