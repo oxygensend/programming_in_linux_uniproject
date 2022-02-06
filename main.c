@@ -2,17 +2,6 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define NANOSEC 1000000000L
-#define FL2NANOSEC(f) {(long)(f), ((f)-(long)(f))*NANOSEC}
-
-void nsleep(float sec){
-
-    struct timespec sleep_t = FL2NANOSEC(sec);
-
-    nanosleep(&sleep_t, NULL);
-
-
-}
 
 
 /* 
@@ -24,29 +13,35 @@ void nsleep(float sec){
 
 */
 
+// For singal handler
 static volatile int numLiveChildren = 0;
+int fd_file_raports;
+struct timespec tt;
+
 /* Number of children started but not yet waited on */
 static void
 sigchldHandler(int sig)
 {
 	int status;
 	pid_t childPid;
-
-	printf("handler: Caught SIGCHLD\n");
+    char * fnt = "Process %d terminated with status - %d at %ld.%ld\n"; 
+	char tab[100];
+	write(fd_file_raports,"handler: Caught SIGCHLD\n", 25);
 	while ((childPid = waitpid(-1, &status, WNOHANG)) > 0) {
-		printf("handler: Child process %d  terminated with status - %d\n",
-		childPid, WEXITSTATUS(status));
-		numLiveChildren--;
+
+		clock_gettime(CLOCK_MONOTONIC, &tt);
+		snprintf(tab, sizeof(tab), fnt,
+		childPid, WEXITSTATUS(status), tt.tv_sec, tt.tv_nsec);
+		write(fd_file_raports, tab, strlen(tab));
+		numLiveChildren--; //TODO
 	}
 	if (childPid == -1 && errno != ECHILD)
-		perror("error");
+		write(fd_file_raports, "handler: ERROR\n",16);
 
 	nsleep(0.1);
 	/* Artificially lengthen execution of handler */
-	printf("handler: returning\n");
+	write(fd_file_raports,"handler: returning\n", 20);
 }
-
-
 
 
 int main(int argc, char ** argv){
@@ -74,13 +69,12 @@ int main(int argc, char ** argv){
 	int fd_file_data = open(file_data, O_RDONLY);
 	int fd_file_test = open("dziala.txt", O_WRONLY);
 	int fd_file_success = open(file_success, O_WRONLY | O_NONBLOCK);
-	int fd_file_raports = open(file_raports, O_WRONLY | O_NONBLOCK | O_CREAT, 0664);
+    fd_file_raports = open(file_raports, O_WRONLY | O_NONBLOCK | O_CREAT, 0664);
 	
-	struct sigaction sa;
 
+	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sigchldHandler; 
-
 	sigaction(SIGCHLD, &sa, NULL);
 
 
@@ -89,23 +83,36 @@ int main(int argc, char ** argv){
 	int pipfd[2];
 	int nr;
 	pipe(pipfd);
-	char * fnt = "New process created! pid = %d\n";
-				char tab[34];
+
+   /* Non-blocking pipe trick 
+   https://stackoverflow.com/questions/36673972/non-blocking-read-on-pipe
+   */
+	int flags = fcntl(pipfd[0], F_GETFD);
+	flags |= O_NONBLOCK;
+	if (fcntl(pipfd[0], F_SETFL, flags)){
+		perror("ERROR: fcntl nonblock flag");
+		return 12;
+	}
+	char * fnt = "New process created pid = %d at %ld.%ld \n";
+	char tab[100];
 	
 	for(int i=0; i<children_n;i++){
 		switch(fork()){
 			case -1: perror(NULL); exit(1); break;
 			case 0:
-				
-				snprintf(tab,sizeof(tab), fnt, getpid());
-				write(fd_file_raports, &tab, sizeof(tab));
+				clock_gettime(CLOCK_MONOTONIC, &tt);
+				snprintf(tab,sizeof(tab), fnt, getpid(), tt.tv_sec, tt.tv_nsec);
+				write(fd_file_raports, &tab, strlen(tab));
+
 				close(STDOUT_FILENO);
 				dup(pipfd[1]);
 				close(STDIN_FILENO);
 				dup(pipfd[0]);
+
 				// write(pipfd[1], "32 12 24 23 123 412 53 123 213 541",100);
 				copyData(fd_file_data, pipfd[1]);
 				execl("poszukiwacz", "poszukiwacz",bytes_for_process, NULL);
+
 						
 
 				break;
@@ -123,8 +130,7 @@ int main(int argc, char ** argv){
 
 		nsleep(0.4);
 		nr=read(pipfd[0],&record, sizeof(struct Record));
-		if( nr == 0){
-			printf("File closed.\n");
+		 if( nr == -1 && errno==EAGAIN) {
 			break;
 
 		}

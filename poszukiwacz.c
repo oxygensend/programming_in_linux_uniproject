@@ -30,16 +30,18 @@ int getInt(char *str){
 
 // Function to get size of bytes that have to be read
 int getBytes(char *str){
+    
 
+    int n = strlen(str);
     int x;
-    if(str[strlen(str)-1] == 'M'){
-        char subbuff[strlen(str)-1];
-        memcpy( subbuff, str, strlen(str)-1 );
+    if(str[n-2] == 'M' && str[n-1] == 'i'){
+        char subbuff[n-2];
+        memcpy( subbuff, str, n-2);
         x = getInt(subbuff) * 1024 * 1024;
     }
-    else if( str[strlen(str)-1] == 'K'){
-        char subbuff[strlen(str)-1];
-        memcpy( subbuff, str, strlen(str)-1 );
+    else if( str[n-2] == 'K' && str[n-1] == 'i'){
+        char subbuff[n-2];
+        memcpy( subbuff, str, n-2 );
         x = getInt(subbuff)  * 1024;
     }
     else {
@@ -47,7 +49,6 @@ int getBytes(char *str){
     }
         
     return x;
-
 
 }
 
@@ -67,11 +68,12 @@ int returnValue(int duplicated){
 
     if(!duplicated)
         return 0;
-    else if(duplicated >=1 && duplicated <= 10)
+    else if(duplicated >0 && duplicated <= 0.1)
         return 1;
+    else if( duplicated > 1)
 
-    for(int i=1;i<10;i++){
-        if(duplicated >= ( i*10 + 1) && duplicated <= (i+1)*10)
+    for(int i=0.1;i<1;i+=0.1){
+        if(duplicated > i && duplicated <= i+0.1)
             return i;
     }
 
@@ -131,7 +133,7 @@ int main(int argc, char **argv){
         
     
 
-    int duplicated = (nSize - temp);
+    int duplicated = (nSize - temp) / nSize;
 
     return(returnValue(duplicated));
 

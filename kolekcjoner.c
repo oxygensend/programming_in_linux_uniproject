@@ -24,15 +24,16 @@ int getInt(char *str){
 // Function to get size of bytes that have to be read
 int getBytes(char *str){
 
+    int n = strlen(str);
     int x;
-    if(str[strlen(str)-1] == 'M'){
-        char subbuff[strlen(str)-1];
-        memcpy( subbuff, str, strlen(str)-1 );
+    if(str[n-2] == 'M' && str[n-1] == 'i'){
+        char subbuff[n-2];
+        memcpy( subbuff, str, n-2);
         x = getInt(subbuff) * 1024 * 1024;
     }
-    else if( str[strlen(str)-1] == 'K'){
-        char subbuff[strlen(str)-1];
-        memcpy( subbuff, str, strlen(str)-1 );
+    else if( str[n-2] == 'K' && str[n-1] == 'i'){
+        char subbuff[n-2];
+        memcpy( subbuff, str, n-2 );
         x = getInt(subbuff)  * 1024;
     }
     else {
@@ -65,6 +66,7 @@ int readFlags(char c){
 
 			case 's':
 				flag_s = 1;
+                // strasznie dziwne rzeczy sie dzieja jak daje optarg bezposrednio do get Bytes
                 s = optarg;
                 if((bytes_data_file = getBytes(s)) == -1){
                     printf("xcd");
@@ -74,7 +76,6 @@ int readFlags(char c){
 
 			case 'w':
 				flag_w = 1;
-                // strasznie dziwne rzeczy sie dzieja jak daje optarg bezposrednio do get Bytes
                 bytes_for_process = optarg; 
                 
 				break;
@@ -156,4 +157,21 @@ int readData(int fd){
 
 
 }
+
+
+char * createFormatedStr(char * s, int param, int size){
+
+
+}
+void nsleep(float sec){
+
+    struct timespec sleep_t = FL2NANOSEC(sec);
+
+    nanosleep(&sleep_t, NULL);
+
+
+}
+
+
+
 

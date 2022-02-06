@@ -9,7 +9,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <errno.h>
 #include <time.h>
+
+#define NANOSEC 1000000000L
+#define FL2NANOSEC(f) {(long)(f), ((f)-(long)(f))*NANOSEC}
+
+
 
 struct  Record{
 
@@ -35,6 +41,9 @@ char * file_success;
 char * file_raports;
 char * file_data;
 struct stat   buffer;   
+
+
+
 // Function to get int from char *
 int getInt(char * str);
 
@@ -43,7 +52,8 @@ int getBytes(char * str);
 int readFlags(char c);
 int checkFlags();
 int copyData(int src, int dst);
-
+void nsleep(float sec);
+void childDo();
 
 
 // int writeData(int fd, pid_t process_pid, short value){
