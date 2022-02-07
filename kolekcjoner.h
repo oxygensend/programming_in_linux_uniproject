@@ -19,7 +19,7 @@
 
 struct  Record{
 
-    short    value;
+    unsigned short    value;
     pid_t    process_pid;
 
 }Record;
@@ -43,6 +43,7 @@ char * file_data;
 struct stat   buffer;   
 
 
+struct timespec tt;
 
 // Function to get int from char *
 int getInt(char * str);
@@ -51,12 +52,16 @@ int getInt(char * str);
 int getBytes(char * str);
 int readFlags(char c);
 int checkFlags();
-int copyData(int src, int dst);
+int copyData(int src, int dst, int buf_size);
 void nsleep(float sec);
 void childDo();
-void writeSuccess(int offset, int fd_r, int fd_w, pid_t pid);
+int writeSuccess(int offset, int fd_r, int fd_w, pid_t pid);
+int readData(int fd, int fd_success_r, int fd_success_w, struct Record record);
+void writeLogs(int fd_raports, pid_t returned_pid, int status);
+void childDo(int fd_raports, int* readfd, int* writefd);
+void updateActiveChildren(pid_t * pid_arr, int active_children,pid_t out_pid);
 
-
+double checkSuccessesStatus(int fd);
 // int writeData(int fd, pid_t process_pid, short value){
 
 //     record.value = value;

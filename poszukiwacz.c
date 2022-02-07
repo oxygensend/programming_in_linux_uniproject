@@ -8,7 +8,7 @@
 
 struct Record{
 
-    short    value;
+    unsigned short    value;
     pid_t    process_pid;
 
 }Record;
@@ -54,7 +54,7 @@ int getBytes(char *str){
 
 
 // Check if value is already in array
-int isInArray(short x, struct Record* records){
+int isInArray(unsigned short x, struct Record* records){
 
     for(int i=0;i<sizeof(records);i++){
         if(x == records[i].value)
@@ -100,7 +100,7 @@ int main(int argc, char **argv){
         return 11;
     }
 
-    short x;
+    unsigned short x;
     int nSize = getBytes(argv[1]);
 
     if(nSize == -1)
@@ -108,27 +108,35 @@ int main(int argc, char **argv){
     struct Record records[nSize];
     int j = 0;
 
-
-    for(int i=0;i<nSize;i++){
-        //short bytes_read = fread(&x, sizeof(short), 1, stdin);
-
+    int bytes_read=0;
+    int bytes = 0;
+    while(bytes_read < nSize*2){
         //fflush(stdin);
-        fscanf(stdin, "%hd", &x);
-        
+        if( (bytes=read(STDIN_FILENO, &x, sizeof(unsigned short))) > 0)
+            bytes_read += bytes;
+        else
+            return 12;
+
+
+        //printf("%d\n", x);
+        // if(bytes_read == nSize*2)
+        //     printf("exit\n");
+
         if(!isInArray(x,records)){
             records[j].value = x;
             records[j].process_pid = getpid();
 
             j++;
         }
+        
 
     }
     
 
     int temp = 0;
     for(int i=0;i<j;i++){
-            // printf("%hd\t%d\n", records[i].value, records[i].process_pid);
-            write(STDOUT_FILENO,&records[i], sizeof(struct Record));
+            //printf("%hd\t%d\n", records[i].value, records[i].process_pid);
+              write(STDOUT_FILENO,&records[i], sizeof(struct Record));
             temp++;
     }
         
