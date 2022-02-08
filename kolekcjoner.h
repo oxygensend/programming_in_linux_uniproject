@@ -35,6 +35,7 @@ int flag_l;
 int flag_p;
 
 int bytes_data_file;
+int bytes_process;
 char * bytes_for_process;
 int children_n;
 char * file_success;
@@ -55,8 +56,8 @@ int checkFlags();
 int copyData(int src, int dst, int buf_size);
 void nsleep(float sec);
 void childDo();
-int writeSuccess(int offset, int fd_r, int fd_w, pid_t pid);
-int readData(int fd, int fd_success_r, int fd_success_w, struct Record record);
+int writeSuccess(int offset, int fd, pid_t pid);
+int readData(int fd, int fd_success, struct Record record);
 void writeLogs(int fd_raports, pid_t returned_pid, int status);
 void childDo(int fd_raports, int* readfd, int* writefd);
 void updateActiveChildren(pid_t * pid_arr, int active_children,pid_t out_pid);

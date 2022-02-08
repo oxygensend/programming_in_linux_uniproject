@@ -10,17 +10,15 @@
 #include <time.h>
 
 
-int main(){
-int fd_file_success = open("osiagniecia.txt", O_RDONLY);
+int main(int argc, char ** argv){
+int fd_file_success = open(argv[1], O_RDONLY);
 
-lseek(fd_file_success,0,SEEK_SET);
 	pid_t x;
     int i=0;
 	while(read(fd_file_success,&x, sizeof(pid_t))>0 ){
-            
+        i++;
             if(x!=0)
-                i++;
+                printf("%d-%d\n", i, x);
 	}
-    printf("%d\n", i);
             
 }	

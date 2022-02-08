@@ -5,6 +5,10 @@
 // For singal handler
 static volatile int numLiveChildren = 0;
 
+int min(int x, int y){
+	return (x > y) ? y : x;
+}
+
 
 int main(int argc, char ** argv){
 
@@ -29,16 +33,15 @@ int main(int argc, char ** argv){
 
    /* ----------------- */
 	int fd_file_data = open(file_data, O_RDONLY);
-	int fd_file_success_r = open(file_success, O_RDONLY | O_NONBLOCK);
-	int fd_file_success_w = open(file_success, O_WRONLY | O_NONBLOCK);
-    int fd_file_raports = open(file_raports, O_WRONLY | O_NONBLOCK | O_CREAT, 0664);
+	int fd_file_success = open(file_success, O_RDWR | O_TRUNC | O_CREAT , 0664 );
+    int fd_file_raports = open(file_raports, O_WRONLY  | O_TRUNC | O_CREAT  , 0664);
 	
+
    /* filling success file with null */
 	pid_t p = 0;
-	for(int i=0;i<65536;i++){
-		write(fd_file_success_w,&p,sizeof(pid_t));
+	for(int i=0;i<MAX_SHORT;i++){
+		write(fd_file_success,&p,sizeof(pid_t));
 	}
-
 	struct Record record;
 	int status=0;
 	int readfd[2], writefd[2];
@@ -52,22 +55,18 @@ int main(int argc, char ** argv){
 	int flags = fcntl(readfd[0], F_GETFD);
 	flags |= O_NONBLOCK;
 	fcntl(readfd[0], F_SETFL, flags);
-	// flags = fcntl(writefd[1], F_GETFD);
-	// flags |= O_NONBLOCK;
-	// fcntl(writefd[1], F_SETFL, flags);
-	// // flags = fcntl(writefd[0], F_GETFD);
-	// // flags |= O_NONBLOCK;
-	// // fcntl(writefd[0], F_SETFL, flags);
+	
 	
 	/* ---------------------------------------- */
 
 	double file_filled=0;	 
 	int read_return;
-	int written_data = 0;
-	int readed_data = 0;
-	int read_buf = 0;
+	int read_bytes = 0;
+	int written_bytes = 0;
+	int read_buf = 1048;
+	int buff;
+	int closed=0;
 	while(1){
-
 		if(numLiveChildren < children_n){
 			switch(pid=fork()){
 				case -1: 
@@ -83,30 +82,8 @@ int main(int argc, char ** argv){
 			}
 		}
 		else {
-
-			read_buf = 1000;	
-			// printf("writen-%d readen-%d\n", written_data, readed_data);
-			if( readed_data+read_buf < bytes_data_file ){
-				// printf("hallo\n");
-				readed_data += copyData(fd_file_data, writefd[1], read_buf);
-			}
-			else if( readed_data < bytes_data_file){
-				// printf("halo\n");
-				read_buf = bytes_data_file - readed_data;
-				readed_data += copyData(fd_file_data, writefd[1], read_buf);
-			}
-			/* Close buffor after wrting all data */
-			if(readed_data - bytes_data_file == 0)
-				close(writefd[1]);
-
-			/* Read data from childs */
-			if( (read_return=readData(readfd[0], 
-				 fd_file_success_r, 
-				 fd_file_success_w,record)) != -1)
-					written_data += read_return;
-
-			file_filled = written_data/(double)MAX_SHORT;
-
+			
+			/* Check if any process has termianated */
 			if((returned_pid = waitpid(-1, &status, WNOHANG)) > 0){
 
 				writeLogs(fd_file_raports,returned_pid,status);
@@ -115,24 +92,53 @@ int main(int argc, char ** argv){
 				if(WEXITSTATUS(status) > 10 || file_filled >= 0.75)
 					children_n--;
 
-				updateActiveChildren(child_pid,numLiveChildren,returned_pid);
 				numLiveChildren--;
+				continue;
 
-				
+			}
+		    
+			/* Check if read failed and no process terminated */
+			if(returned_pid == 0 && read_return == -1 ){
+				nsleep(0.48); 
 			}
 
-			if(numLiveChildren == 0)
+			/* If no process exists, exit program */
+			if(returned_pid == -1)
 				break;
-			
-			/* Check if both operations failed. */
-			 if(returned_pid <= 0 && read_return == -1 )
-			 	nsleep(0.48);
 
+
+			
+			/* Read data from childs */
+			if( (read_return=readData(readfd[0], 
+				 fd_file_success,record)) != -1)
+					read_bytes += read_return;
+
+			file_filled = read_bytes/(double)(MAX_SHORT*2);
+			
+
+			/* Copy data from soruce to pipe */
+			if( written_bytes < bytes_data_file){
+				if( written_bytes + read_buf > bytes_data_file)
+					buff = bytes_data_file - written_bytes;
+				else 
+					buff = read_buf;
+
+				written_bytes += copyData(fd_file_data, writefd[1], buff);
+			}
+			/* Close buffor after wrting all data */
+			if(written_bytes - bytes_data_file == 0 && closed == 0){
+				closed = 1;
+				close(writefd[1]);
+
+			}
+			
 		}
 
 		
 	}
 
+	printf("Bytes recived from child processes: %d\n", read_bytes);
+	printf("Bytes readed  from  source and transferred to children: %d\n", written_bytes);
 	printf("File was filled in %0.2lf%%\n", 100*file_filled);
 	
 			

@@ -15,7 +15,7 @@ struct Record{
 
 
 
-// Function to get int from char *
+/* Function to get int from char */
 int getInt(char *str){
 
     char * endptr;
@@ -28,8 +28,8 @@ int getInt(char *str){
 
 }
 
-// Function to get size of bytes that have to be read
-int getBytes(char *str){
+/* Function to get amount of numbers that have to be read */
+int getAmountOfShorts(char *str){
     
 
     int n = strlen(str);
@@ -53,7 +53,7 @@ int getBytes(char *str){
 }
 
 
-// Check if value is already in array
+/* Check if value is already in array */
 int isInArray(unsigned short x, struct Record records [], int nSize){
 
     for(int i=0;i<nSize;i++){
@@ -64,7 +64,7 @@ int isInArray(unsigned short x, struct Record records [], int nSize){
     return 0;
 }
 
-// Returns value depending on the number of duplicates
+/* Returns value depending on the number of duplicates */
 int returnValue(double duplicated){
 
     if(!duplicated)
@@ -91,7 +91,7 @@ int main(int argc, char **argv){
 
     struct stat   buffer;   
 
-    // Check if standard input is connected to pipe
+    /* Check if standard input is connected to pipe */
     if(fstat(STDIN_FILENO, &buffer) == -1){
         perror("File doesnt exist");
         return 11;
@@ -101,64 +101,47 @@ int main(int argc, char **argv){
         return 11;
     }
 
-    unsigned short x;
-    int nSize = getBytes(argv[1]);
+    int nSize = getAmountOfShorts(argv[1]);
 
     if(nSize == -1)
         return 12;
+
     struct Record records[nSize];
     for(int i=0;i<nSize;i++){
         records[i].value = -1;
         records[i].process_pid = 0;
     }
-    int j = 0;
 
+    unsigned short x;
+    int j = 0;
     int bytes_read=0;
     int bytes = 0;
     while(bytes_read < nSize*2){
-        //fflush(stdin);
-        bytes=read(STDIN_FILENO, &x, sizeof(unsigned short));
-        // printf("process=%d j=%d %d c=%d errno=%d\n",getpid(),j, bytes,x, errno);
-         if( bytes == 0 && bytes_read == 0 )
-            return 12;
-        if(bytes == 0)
-            break;
         
+        bytes=read(STDIN_FILENO, &x, sizeof(unsigned short));
+       
+        if( bytes <= 0 && bytes_read == 0 )
+            return 13;
+        if(bytes <= 0)
+            break;
         if( bytes > 0){
             bytes_read += bytes;
-            // printf("%d\n", x);
         }
-        // printf("process=%d bytes_read=%d j=%d %d c=%d errno=%d\n",getpid(),bytes_read,j, bytes,x, errno);
-        // printf("process=%d bytes_read = %d\n",getpid(), bytes_read);
-
-
-       
-        // if(bytes_read == nSize*2)
-        //     printf("exit\n");
 
         if(!isInArray(x,records, nSize)){
             records[j].value = x;
             records[j].process_pid = getpid();
 
+            write(STDOUT_FILENO,&records[j], sizeof(struct Record));
             j++;
         }
-        
 
     }
-    
-    // printf("process=%d bytes_read=%d\n", getpid(), bytes_read);
+
     // printf("halo-%d\n", j);
-    int temp = 0;
-    for(int i=0;i<j;i++){
-            //printf("%hd\t%d\n", records[i].value, records[i].process_pid);
-              write(STDOUT_FILENO,&records[i], sizeof(struct Record));
-            temp++;
-    }
-        
-    
+    double duplicated = (bytes_read - 2*j) / (double)bytes_read;
 
-    double duplicated = (bytes_read - 2*temp) / (double)bytes_read;
-
+    // printf("status-%lf\n", duplicated);
     return(returnValue(duplicated));
 
 }
