@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+#include <errno.h>
 struct Record{
 
     unsigned short    value;
@@ -54,9 +54,10 @@ int getBytes(char *str){
 
 
 // Check if value is already in array
-int isInArray(unsigned short x, struct Record* records){
+int isInArray(unsigned short x, struct Record records [], int nSize){
 
-    for(int i=0;i<sizeof(records);i++){
+    for(int i=0;i<nSize;i++){
+
         if(x == records[i].value)
             return 1;
     }
@@ -106,23 +107,36 @@ int main(int argc, char **argv){
     if(nSize == -1)
         return 12;
     struct Record records[nSize];
+    for(int i=0;i<nSize;i++){
+        records[i].value = -1;
+        records[i].process_pid = 0;
+    }
     int j = 0;
 
     int bytes_read=0;
     int bytes = 0;
     while(bytes_read < nSize*2){
         //fflush(stdin);
-        if( (bytes=read(STDIN_FILENO, &x, sizeof(unsigned short))) > 0)
-            bytes_read += bytes;
-        else
+        bytes=read(STDIN_FILENO, &x, sizeof(unsigned short));
+        // printf("process=%d j=%d %d c=%d errno=%d\n",getpid(),j, bytes,x, errno);
+         if( bytes == 0 && bytes_read == 0 )
             return 12;
+        if(bytes == 0)
+            break;
+        
+        if( bytes > 0){
+            bytes_read += bytes;
+            // printf("%d\n", x);
+        }
+        // printf("process=%d bytes_read=%d j=%d %d c=%d errno=%d\n",getpid(),bytes_read,j, bytes,x, errno);
+        // printf("process=%d bytes_read = %d\n",getpid(), bytes_read);
 
 
-        //printf("%d\n", x);
+       
         // if(bytes_read == nSize*2)
         //     printf("exit\n");
 
-        if(!isInArray(x,records)){
+        if(!isInArray(x,records, nSize)){
             records[j].value = x;
             records[j].process_pid = getpid();
 
@@ -132,7 +146,8 @@ int main(int argc, char **argv){
 
     }
     
-
+    // printf("process=%d bytes_read=%d\n", getpid(), bytes_read);
+    // printf("halo-%d\n", j);
     int temp = 0;
     for(int i=0;i<j;i++){
             //printf("%hd\t%d\n", records[i].value, records[i].process_pid);
@@ -142,7 +157,7 @@ int main(int argc, char **argv){
         
     
 
-    double duplicated = (nSize - temp) / (double)nSize;
+    double duplicated = (bytes_read - 2*temp) / (double)bytes_read;
 
     return(returnValue(duplicated));
 

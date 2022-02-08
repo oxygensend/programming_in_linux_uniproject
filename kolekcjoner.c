@@ -40,7 +40,7 @@ int getBytes(char *str){
         x = getInt(str);
     }
         
-    return x;
+    return 2*x;
 
 
 }
@@ -140,8 +140,9 @@ int checkFlags(){
 int copyData(int src_fd, int dst_fd, int buf_size){
 
     char buf[buf_size];
-    read(src_fd, &buf, 10);
-    write(dst_fd, &buf,10 );
+    read(src_fd, &buf, buf_size);
+    write(dst_fd, &buf, buf_size );
+    
 
     return buf_size;
 

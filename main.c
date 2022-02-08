@@ -52,13 +52,16 @@ int main(int argc, char ** argv){
 	int flags = fcntl(readfd[0], F_GETFD);
 	flags |= O_NONBLOCK;
 	fcntl(readfd[0], F_SETFL, flags);
-	flags = fcntl(writefd[1], F_GETFD);
-	flags |= O_NONBLOCK;
-	fcntl(writefd[1], F_SETFL, flags);
+	// flags = fcntl(writefd[1], F_GETFD);
+	// flags |= O_NONBLOCK;
+	// fcntl(writefd[1], F_SETFL, flags);
+	// // flags = fcntl(writefd[0], F_GETFD);
+	// // flags |= O_NONBLOCK;
+	// // fcntl(writefd[0], F_SETFL, flags);
 	
 	/* ---------------------------------------- */
 
-	int file_filled=0;	 
+	double file_filled=0;	 
 	int read_return;
 	int written_data = 0;
 	int readed_data = 0;
@@ -81,30 +84,35 @@ int main(int argc, char ** argv){
 		}
 		else {
 
-			read_buf = 10;	
-			if( readed_data+read_buf <= 2*bytes_data_file ){
-				printf("hallo\n");
+			read_buf = 1000;	
+			// printf("writen-%d readen-%d\n", written_data, readed_data);
+			if( readed_data+read_buf < bytes_data_file ){
+				// printf("hallo\n");
 				readed_data += copyData(fd_file_data, writefd[1], read_buf);
 			}
-			else if( readed_data < 2*bytes_data_file){
-				printf("halo\n");
-				read_buf = 2*bytes_data_file - readed_data;
+			else if( readed_data < bytes_data_file){
+				// printf("halo\n");
+				read_buf = bytes_data_file - readed_data;
 				readed_data += copyData(fd_file_data, writefd[1], read_buf);
 			}
+			/* Close buffor after wrting all data */
+			if(readed_data - bytes_data_file == 0)
+				close(writefd[1]);
 
+			/* Read data from childs */
 			if( (read_return=readData(readfd[0], 
-					 fd_file_success_r, 
-					fd_file_success_w,record)) != -1)
+				 fd_file_success_r, 
+				 fd_file_success_w,record)) != -1)
 					written_data += read_return;
 
-
+			file_filled = written_data/(double)MAX_SHORT;
 
 			if((returned_pid = waitpid(-1, &status, WNOHANG)) > 0){
 
 				writeLogs(fd_file_raports,returned_pid,status);
 
 				/* Jezli potomek konczy z błędem to zmieniejszamy liczbe potomkow*/
-				if(WEXITSTATUS(status) > 10 || written_data/(double)65536 >= 0.75)
+				if(WEXITSTATUS(status) > 10 || file_filled >= 0.75)
 					children_n--;
 
 				updateActiveChildren(child_pid,numLiveChildren,returned_pid);
@@ -112,17 +120,20 @@ int main(int argc, char ** argv){
 
 				
 			}
-			printf("%d\n", returned_pid);
+
 			if(numLiveChildren == 0)
 				break;
 			
 			/* Check if both operations failed. */
-			//  if(returned_pid <= 0 && read_return == -1 )
-			//  	nsleep(0.48);
+			 if(returned_pid <= 0 && read_return == -1 )
+			 	nsleep(0.48);
 
 		}
 
 		
-		}
+	}
+
+	printf("File was filled in %0.2lf%%\n", 100*file_filled);
+	
 			
 }

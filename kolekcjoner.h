@@ -14,7 +14,7 @@
 
 #define NANOSEC 1000000000L
 #define FL2NANOSEC(f) {(long)(f), ((f)-(long)(f))*NANOSEC}
-
+#define MAX_SHORT 65536
 
 
 struct  Record{
