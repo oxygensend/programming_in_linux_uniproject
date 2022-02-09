@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-
+#include <stdarg.h>
 // Function to get int from char *
 int getInt(char *str){
 
@@ -25,15 +25,17 @@ int getInt(char *str){
 int getBytes(char *str){
 
     int n = strlen(str);
-    int x;
+    int x = -1;
     if(str[n-2] == 'M' && str[n-1] == 'i'){
         char subbuff[n-2];
         memcpy( subbuff, str, n-2);
+        subbuff[n-2] = '\0';
         x = getInt(subbuff) * 1024 * 1024;
     }
     else if( str[n-2] == 'K' && str[n-1] == 'i'){
         char subbuff[n-2];
         memcpy( subbuff, str, n-2 );
+        subbuff[n-2] = '\0';
         x = getInt(subbuff)  * 1024;
     }
     else {
@@ -65,17 +67,15 @@ int readFlags(char c){
 
 			case 's':
 				flag_s = 1;
-                // strasznie dziwne rzeczy sie dzieja jak daje optarg bezposrednio do get Bytes
-                s = optarg;
-                if((bytes_data_file = getBytes(s)) == -1){
+               
+                if((bytes_data_file = getBytes(optarg)) == -2){
                     return 1;
                 }
 				break;
 
 			case 'w':
 				flag_w = 1;
-                s = optarg;
-                if((bytes_process = getBytes(s)) == -1){
+                if((bytes_process = getBytes(optarg)) == -2){
                     return 1;
                 }
                 bytes_for_process = optarg; 
@@ -138,8 +138,10 @@ int checkFlags(){
 int copyData(int src_fd, int dst_fd, int buf_size){
 
     char buf[buf_size];
-    read(src_fd, &buf, buf_size);
-    int nr = write(dst_fd, &buf, buf_size );
+    if(read(src_fd, &buf, buf_size) == -1)
+        return -1;
+    if(write(dst_fd, &buf, buf_size) == -1)
+        return -1;
 
 
     return buf_size;
@@ -151,7 +153,10 @@ int readData(int fd, int fd_success, struct Record record){
     int nr=0;
     while(1){
 	    nr=read(fd,&record, sizeof(struct Record));
-		if(nr <= 0){
+        if(nr == 0){
+            return -1;
+        }
+		else if(nr == -1 ){
             break;
 		}
 		
@@ -165,7 +170,7 @@ int readData(int fd, int fd_success, struct Record record){
 	}
     
 
-    return (nr <= 0 && i == 0) ? -1 : i;
+    return (nr == 1 && i == 0) ? 0 : i;
 }
 
 
@@ -191,24 +196,25 @@ int writeSuccess(int offset, int fd, pid_t pid){
     return bytes;
 }
 
-void writeLogs(int fd_raports, pid_t returned_pid, int status){
 
-    char * fnt = "EXIT:Process %d terminated with status - %d at %ld.%ld\n"; 
-    char tab[100];
-    clock_gettime(CLOCK_MONOTONIC, &tt);
-    snprintf(tab, sizeof(tab), fnt,
-    returned_pid, WEXITSTATUS(status), tt.tv_sec, tt.tv_nsec);
-    write(fd_raports, tab, strlen(tab));
+void writeLogs(int fd_raports, char * fnt, ... ){
+ 
+    /* man snprintf znalazłem ciekawą funkcje vdprintf,
+     dalej man va_start */
+    va_list args;
+    va_start(args,fnt);
+    vdprintf(fd_raports,fnt, args);
+    va_end(args);
 }
 
 void childDo(int fd_raports, int * readfd, int * writefd){
 
     char * fnt = "CREATE:New process created pid = %d at %ld.%ld \n";
-	char tab[100];
-
     clock_gettime(CLOCK_MONOTONIC, &tt);
-    snprintf(tab,sizeof(tab), fnt, getpid(), tt.tv_sec, tt.tv_nsec);
-    write(fd_raports, &tab, strlen(tab));
+
+    writeLogs(fd_raports, fnt, getpid(), tt.tv_sec, tt.tv_nsec);
+   
+
     dup2(readfd[1], STDOUT_FILENO);
     close(writefd[1]);
     close(readfd[1]);

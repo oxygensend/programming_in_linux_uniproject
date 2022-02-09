@@ -37,11 +37,13 @@ int getAmountOfShorts(char *str){
     if(str[n-2] == 'M' && str[n-1] == 'i'){
         char subbuff[n-2];
         memcpy( subbuff, str, n-2);
+        subbuff[n-2] = '\0';
         x = getInt(subbuff) * 1024 * 1024;
     }
     else if( str[n-2] == 'K' && str[n-1] == 'i'){
         char subbuff[n-2];
         memcpy( subbuff, str, n-2 );
+        subbuff[n-2] = '\0';
         x = getInt(subbuff)  * 1024;
     }
     else {

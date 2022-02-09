@@ -58,7 +58,7 @@ void nsleep(float sec);
 void childDo();
 int writeSuccess(int offset, int fd, pid_t pid);
 int readData(int fd, int fd_success, struct Record record);
-void writeLogs(int fd_raports, pid_t returned_pid, int status);
+void writeLogs(int fd_raports, char * fnt, ... );
 void childDo(int fd_raports, int* readfd, int* writefd);
 void updateActiveChildren(pid_t * pid_arr, int active_children,pid_t out_pid);
 
