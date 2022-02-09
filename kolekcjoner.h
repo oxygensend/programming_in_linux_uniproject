@@ -11,11 +11,10 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <time.h>
-
+#include <stdarg.h>
 #define NANOSEC 1000000000L
 #define FL2NANOSEC(f) {(long)(f), ((f)-(long)(f))*NANOSEC}
-#define MAX_SHORT 65536
-
+#define MAX_SHORT 65535
 
 struct  Record{
 
@@ -34,22 +33,24 @@ int flag_f;
 int flag_l;
 int flag_p;
 
+// for flags values
 int bytes_data_file;
 int bytes_process;
 char * bytes_for_process;
-int children_n;
 char * file_success;
 char * file_raports;
 char * file_data;
 struct stat   buffer;   
 
-
+// global variables definition
+int numLiveChildren ;
+int children_n;
+double file_filled;	 
 struct timespec tt;
 
-// Function to get int from char *
-int getInt(char * str);
 
-// Function to get size of bytes that have to be read
+// function declaration
+int getInt(char * str);
 int getBytes(char * str);
 int readFlags(char c);
 int checkFlags();
@@ -60,19 +61,7 @@ int writeSuccess(int offset, int fd, pid_t pid);
 int readData(int fd, int fd_success, struct Record record);
 void writeLogs(int fd_raports, char * fnt, ... );
 void childDo(int fd_raports, int* readfd, int* writefd);
-void updateActiveChildren(pid_t * pid_arr, int active_children,pid_t out_pid);
+int checkStatus(int fd);
 
-double checkSuccessesStatus(int fd);
-// int writeData(int fd, pid_t process_pid, short value){
-
-//     record.value = value;
-//     record.process_pid = process_pid;
-
-//    if(write(fd,&record, sizeof(struct Record)) == -1){
-//        printf("Erorr occured while wirting data");
-//        return 11;
-//    }
-
-// }
 
 #endif

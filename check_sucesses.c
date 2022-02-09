@@ -16,9 +16,10 @@ int fd_file_success = open(argv[1], O_RDONLY);
 	pid_t x;
     int i=0;
 	while(read(fd_file_success,&x, sizeof(pid_t))>0 ){
-        i++;
             if(x!=0)
-                printf("%d-%d\n", i, x);
+                i++;
 	}
+
+    printf("%d\n", i);
             
 }	

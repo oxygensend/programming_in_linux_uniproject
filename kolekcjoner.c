@@ -1,13 +1,5 @@
 #include "kolekcjoner.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <stdarg.h>
+
 // Function to get int from char *
 int getInt(char *str){
 
@@ -21,7 +13,7 @@ int getInt(char *str){
 
 }
 
-// Function to get size of bytes that have to be read
+/* Function to get size of bytes that have to be read */
 int getBytes(char *str){
 
     int n = strlen(str);
@@ -47,9 +39,9 @@ int getBytes(char *str){
 
 }
 
-
+/* Dealing with flags values  */
 int readFlags(char c){
-		char *s;
+
 		switch(c) {
 		
 			case 'd':
@@ -124,17 +116,16 @@ int readFlags(char c){
 
 }
 
-// Check if all flags are loaded
+/* Check if all flags are loaded */
 int checkFlags(){
 
-    if(flag_l + flag_p + flag_d + flag_s + flag_f + flag_w < 6){
-        perror("Flags are missing!\nRequired flags are: l,s,w,f,d,p");
+    if(flag_l + flag_p + flag_d + flag_s + flag_f + flag_w < 6)
         return 1;
-    }
 
     return 0;
 }
 
+/* Copy data from source to pipe */
 int copyData(int src_fd, int dst_fd, int buf_size){
 
     char buf[buf_size];
@@ -143,14 +134,15 @@ int copyData(int src_fd, int dst_fd, int buf_size){
     if(write(dst_fd, &buf, buf_size) == -1)
         return -1;
 
-
     return buf_size;
 
 }
 
+/* Read data provided by child processes and write them to success file */
 int readData(int fd, int fd_success, struct Record record){
     int i=0;
     int nr=0;
+    int success;
     while(1){
 	    nr=read(fd,&record, sizeof(struct Record));
         if(nr == 0){
@@ -162,10 +154,13 @@ int readData(int fd, int fd_success, struct Record record){
 		
 		else{
             // printf("%d\t%d\n", record.value, record.process_pid);
-			i+=writeSuccess(record.value*sizeof(pid_t), 
+			if((success=writeSuccess(record.value*sizeof(pid_t), 
 						fd_success,
 						record.process_pid
-						);
+						)) == -1 )
+                return -2;
+            
+            i+=success;
 		}
 	}
     
@@ -173,7 +168,7 @@ int readData(int fd, int fd_success, struct Record record){
     return (nr == 1 && i == 0) ? 0 : i;
 }
 
-
+/* Auxiliary function for sleep */
 void nsleep(float sec){
 
     struct timespec sleep_t = FL2NANOSEC(sec);
@@ -181,22 +176,24 @@ void nsleep(float sec){
 
 }
 
-
+/* Write to success file */
 int writeSuccess(int offset, int fd, pid_t pid){
 
     pid_t temp;
     int bytes=0;
     lseek(fd,offset,SEEK_SET);
-    read(fd,&temp, sizeof(pid_t));
+    if(read(fd,&temp, sizeof(pid_t)) == -1)
+        return -1;
     if(!temp){
         lseek(fd,-sizeof(pid_t), SEEK_CUR);
-        write(fd, &pid ,sizeof(pid_t));
+        if(write(fd, &pid ,sizeof(pid_t)) == -1)
+            return -1;
         bytes=2;
     } 
     return bytes;
 }
 
-
+/* Write row to logs file */
 void writeLogs(int fd_raports, char * fnt, ... ){
  
     /* man snprintf znalazłem ciekawą funkcje vdprintf,
@@ -206,7 +203,7 @@ void writeLogs(int fd_raports, char * fnt, ... ){
     vdprintf(fd_raports,fnt, args);
     va_end(args);
 }
-
+/* Action of child process  */
 void childDo(int fd_raports, int * readfd, int * writefd){
 
     char * fnt = "CREATE:New process created pid = %d at %ld.%ld \n";
@@ -225,15 +222,30 @@ void childDo(int fd_raports, int * readfd, int * writefd){
     execl("poszukiwacz", "poszukiwacz",bytes_for_process, NULL);
 }
 
-double checkSuccessesStatus(int fd){
-    
-    int count=0;
-    pid_t pid;
 
-    while(read(fd, &pid, sizeof(pid_t))>0){
-        if(pid != 0)
-            count++;
+/* Check status of child process termination */
+int checkStatus(int fd){
+    
+    int returned_pid;
+    int status;
+	if((returned_pid = waitpid(-1, &status, WNOHANG)) > 0){
+        clock_gettime(CLOCK_MONOTONIC, &tt);
+        writeLogs(fd,
+                  "EXIT:Process %d terminated with status - %d at %ld.%ld\n",
+                  returned_pid,
+                  WEXITSTATUS(status),
+                  tt.tv_sec, tt.tv_sec
+                );
+
+        /* If child terminates with > 10 or
+         file is filled in 75% no more processes will be created
+         */
+        if(WEXITSTATUS(status) > 10 || file_filled >= 0.75)
+            children_n--;
+
+        numLiveChildren--;
+
     }
 
-    return count;
+    return returned_pid;
 }

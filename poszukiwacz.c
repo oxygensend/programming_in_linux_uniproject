@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <errno.h>
+
 struct Record{
 
     unsigned short    value;
@@ -122,13 +122,14 @@ int main(int argc, char **argv){
         
         bytes=read(STDIN_FILENO, &x, sizeof(unsigned short));
        
-        if( bytes <= 0 && bytes_read == 0 )
+        if( bytes == -1)
+            return 99;
+        else if( bytes == 0 && bytes_read == 0 )
             return 13;
-        if(bytes <= 0)
+        else if(bytes == 0)
             break;
-        if( bytes > 0){
-            bytes_read += bytes;
-        }
+
+        bytes_read += bytes;
 
         if(!isInArray(x,records, nSize)){
             records[j].value = x;
@@ -140,10 +141,8 @@ int main(int argc, char **argv){
 
     }
 
-    // printf("halo-%d\n", j);
     double duplicated = (bytes_read - 2*j) / (double)bytes_read;
 
-    // printf("status-%lf\n", duplicated);
     return(returnValue(duplicated));
 
 }
