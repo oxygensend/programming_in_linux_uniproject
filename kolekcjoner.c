@@ -60,14 +60,14 @@ int readFlags(char c){
 			case 's':
 				flag_s = 1;
                
-                if((bytes_data_file = getBytes(optarg)) == -2){
+                if((bytes_data_file = getBytes(optarg)) < 0){
                     return 1;
                 }
 				break;
 
 			case 'w':
 				flag_w = 1;
-                if((bytes_process = getBytes(optarg)) == -2){
+                if((bytes_process = getBytes(optarg)) < 0){
                     return 1;
                 }
                 bytes_for_process = optarg; 
@@ -153,7 +153,6 @@ int readData(int fd, int fd_success, struct Record record){
 		}
 		
 		else{
-            // printf("%d\t%d\n", record.value, record.process_pid);
 			if((success=writeSuccess(record.value*sizeof(pid_t), 
 						fd_success,
 						record.process_pid
@@ -218,7 +217,6 @@ void childDo(int fd_raports, int * readfd, int * writefd){
     dup2(writefd[0], STDIN_FILENO);
     close(readfd[0]);
     close(writefd[0]);
-
     execl("poszukiwacz", "poszukiwacz",bytes_for_process, NULL);
 }
 
@@ -234,7 +232,7 @@ int checkStatus(int fd){
                   "EXIT:Process %d terminated with status - %d at %ld.%ld\n",
                   returned_pid,
                   WEXITSTATUS(status),
-                  tt.tv_sec, tt.tv_sec
+                  tt.tv_sec, tt.tv_nsec
                 );
 
         /* If child terminates with > 10 or
@@ -242,7 +240,6 @@ int checkStatus(int fd){
          */
         if(WEXITSTATUS(status) > 10 || file_filled >= 0.75)
             children_n--;
-
         numLiveChildren--;
 
     }

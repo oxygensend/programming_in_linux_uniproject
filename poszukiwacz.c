@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
 struct Record{
 
     unsigned short    value;
@@ -55,32 +54,24 @@ int getAmountOfShorts(char *str){
 }
 
 
-/* Check if value is already in array */
-int isInArray(unsigned short x, struct Record records [], int nSize){
-
-    for(int i=0;i<nSize;i++){
-
-        if(x == records[i].value)
-            return 1;
-    }
-    return 0;
-}
-
 /* Returns value depending on the number of duplicates */
 int returnValue(double duplicated){
 
-    if(!duplicated)
-        return 0;
-    else if(duplicated >0 && duplicated <= 0.1)
+    
+   if(duplicated >0 && duplicated <= 0.1)
         return 1;
     else if( duplicated > 1)
         return 10;
 
-    for(double i=0.1;i<1;i+=0.1){
+    float i = 0.1;
+    while(i<1){
         if(duplicated > i && duplicated <= i+0.1)
-            return i*10;
+            return (i+0.1)*10;
+
+        i+=0.1;
     }
 
+    return 0;
 }
 
 int main(int argc, char **argv){
@@ -108,16 +99,13 @@ int main(int argc, char **argv){
     if(nSize == -1)
         return 12;
 
-    struct Record records[nSize];
-    for(int i=0;i<nSize;i++){
-        records[i].value = -1;
-        records[i].process_pid = 0;
-    }
 
+    unsigned short numbers[65536] = {0};
+    struct Record record;
     unsigned short x;
-    int j = 0;
     int bytes_read=0;
     int bytes = 0;
+    int duplicate=0;
     while(bytes_read < nSize*2){
         
         bytes=read(STDIN_FILENO, &x, sizeof(unsigned short));
@@ -126,23 +114,23 @@ int main(int argc, char **argv){
             return 99;
         else if( bytes == 0 && bytes_read == 0 )
             return 13;
-        else if(bytes == 0)
+        else if(bytes == 0) 
             break;
 
         bytes_read += bytes;
 
-        if(!isInArray(x,records, nSize)){
-            records[j].value = x;
-            records[j].process_pid = getpid();
-
-            write(STDOUT_FILENO,&records[j], sizeof(struct Record));
-            j++;
+        if(numbers[x] == 0){
+            numbers[x] = 1;
+            record.value = x;
+            record.process_pid = getpid();
+            write(STDOUT_FILENO,&record, sizeof(struct Record));
         }
+        else
+            duplicate++;
 
     }
 
-    double duplicated = (bytes_read - 2*j) / (double)bytes_read;
-
-    return(returnValue(duplicated));
+    double duplicated =  2*duplicate / (double)bytes_read;
+    return returnValue(duplicated);
 
 }

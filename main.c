@@ -1,5 +1,5 @@
 #include "kolekcjoner.h"
-
+#include <sys/ioctl.h>
 
 
 void errorExit( char * msg){
@@ -15,7 +15,7 @@ int main(int argc, char ** argv){
     char c;
     while (( c = getopt(argc, argv, "d:s:w:f:l:p:")) != -1){
 	
-		if( optarg && optarg[0] == '-' && optarg[1] ){
+		if( optarg && optarg[0] == '-' && optarg[1]<48 && optarg[1] >57 ){
 			optopt = c + '\0';
 			c = 63;
 			optind--;
@@ -34,6 +34,7 @@ int main(int argc, char ** argv){
 	int fd_file_success = open(file_success, O_RDWR | O_TRUNC | O_CREAT , 0664 );
     int fd_file_raports = open(file_raports, O_WRONLY  | O_TRUNC | O_CREAT  , 0664);
 	
+
  
     /* Check if volume is within file size */
 	if(fstat(fd_file_data, &buffer) == -1)
@@ -69,13 +70,14 @@ int main(int argc, char ** argv){
 	int read_return = 0;
 	int read_bytes = 0;
 	int written_bytes = 0;
-	int read_buf = 4096 ; 
+	int read_buf = 65536; 
 	
 			
-	printf("%d\n", read_buf);
 	int buff;
 	int closed=0;
 	int bytes=0;
+	int bytes_pipe = 0;
+	printf("Processing, please be patient...\n");
 	while(1){
 		
 	
@@ -94,7 +96,6 @@ int main(int argc, char ** argv){
 			}
 		}
 		else {
-			
 			/* Check if any process has termianated */
 			if((returned_pid=checkStatus(fd_file_raports)) > 0)
 		    	continue;
@@ -109,8 +110,6 @@ int main(int argc, char ** argv){
 				break;
 
 
-			printf("num alive=%d\n", numLiveChildren);
-			printf("read-%d write-%d\n", read_bytes, written_bytes);
 
 			/* Read data from childs and check if no error occurred */
 			if((read_return=readData(readfd[0], fd_file_success,record)) == -1){
@@ -123,16 +122,23 @@ int main(int argc, char ** argv){
 
 			file_filled = read_bytes/(double)(MAX_SHORT*2);
 			
-			printf("file filled %lf\n", file_filled);	
 
-			/* Do tego warunku dodaje zabezpiecznie, zeby program nie wpisywał do potoku,
-			 gdy roznica jest < 55000 (nie jest to jakas specjalnie wyliczona wartosc), ale
-			 maksymalna ilosc danych w potoku to 64Kb, przy buforze rzędu 2Kb, w przypadku małej ilosci
-			 potomków oraz małego bloku np p=1 w=100, do pipe są wysłane co iteracje 2kB, a 
-			 odbierane tylko 100 przez co potok sie zapycha, w ten sposób probuje to rozwiazac
-			 poniewaz w moim rozwiazaniu nie moge ustawic writefd[1] na nieblokujacy  */
+			/*
+				Do warunku wpisania danych do potoku, sprawdzam czy przypadkiem potok
+				nie jest przepełniony, ponieważ maksymalna ilosc bajtów w potoku pod
+				linuxem przynajmniej na moim systemie = 64Ki bajtów.
+				Ponieważ w moim rozwiązaniu nie moge zastosować trybu nieblokujacego dla tego pipe,
+				to wysyłając na potok w każdej iteracji 64Ki bajtów, dojdzie do sytuacji, że potok
+				bedzie przepełniony, i program się zablokuje, dlatego dane wysyłam tylko wtedy, gdy
+				aktualna liczba danych w pipe + buffor jest < 64kbi	
+				Funkcja do odczytania ile danych oczekuje w buforze znaleziona na:
+				https://stackoverflow.com/questions/13377427/how-much-data-is-in-pipec
+			 */
+			if(!closed)	
+				ioctl(writefd[1],FIONREAD,&bytes_pipe);
+			
 			/* Copy data from source to pipe */
-			if( written_bytes < bytes_data_file && written_bytes - read_bytes < 55000){
+			if( written_bytes < bytes_data_file && bytes_pipe + read_buf <= 65536){
 				if( written_bytes + read_buf > bytes_data_file)
 					buff = bytes_data_file - written_bytes;
 				else 
@@ -170,7 +176,7 @@ int main(int argc, char ** argv){
 
 	printf("Bytes recived from child processes: %d\n", read_bytes);
 	printf("Bytes readed  from  source and transferred to pipe: %d\n", written_bytes);
-	printf("File was filled in %0.2lf%%\n", 100*file_filled);
+	printf("Successes file was filled in %0.2lf%%\n", 100*file_filled);
 	
 
 	exit(EXIT_SUCCESS);		
