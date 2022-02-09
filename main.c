@@ -1,5 +1,4 @@
 #include "kolekcjoner.h"
-#include <sys/ioctl.h>
 
 
 void errorExit( char * msg){
@@ -9,7 +8,7 @@ void errorExit( char * msg){
 
 }
 int main(int argc, char ** argv){
-
+	
 
    /* Dealing with flags */
     char c;
@@ -29,7 +28,7 @@ int main(int argc, char ** argv){
 		errorExit("Flags are missing!\nRequired flags are: l,s,w,f,d,p");
     }
 
-   /* ----------------- */
+   /* Opening files */
 	int fd_file_data = open(file_data, O_RDONLY);
 	int fd_file_success = open(file_success, O_RDWR | O_TRUNC | O_CREAT , 0664 );
     int fd_file_raports = open(file_raports, O_WRONLY  | O_TRUNC | O_CREAT  , 0664);
@@ -71,12 +70,11 @@ int main(int argc, char ** argv){
 	int read_bytes = 0;
 	int written_bytes = 0;
 	int read_buf = 65536; 
-	
-			
 	int buff;
 	int closed=0;
 	int bytes=0;
 	int bytes_pipe = 0;
+
 	printf("Processing, please be patient...\n");
 	while(1){
 		
@@ -84,8 +82,7 @@ int main(int argc, char ** argv){
 		if(numLiveChildren < children_n){
 			switch(fork()){
 				case -1: 
-					write(fd_file_raports, "ERROR:Error occuried while fork()\n", 35);
-				 	exit(1);
+				 	errorExit("ERROR:Error occuried while fork()");
 					break;
 				case 0:
 					childDo(fd_file_raports, readfd, writefd);	
@@ -100,28 +97,9 @@ int main(int argc, char ** argv){
 			if((returned_pid=checkStatus(fd_file_raports)) > 0)
 		    	continue;
 
-			/* Check if read failed and no process terminated */
-			if(!returned_pid && !read_return ){
-				nsleep(0.48); 
-			}
-
 			/* If no process exists, exit program */
 			if(returned_pid == -1)
 				break;
-
-
-
-			/* Read data from childs and check if no error occurred */
-			if((read_return=readData(readfd[0], fd_file_success,record)) == -1){
-						errorExit("ERROR:Pipe is closed, cannot read");
-			}
-			else if(read_return == -2){
-				errorExit("ERROR:Cannot write to success file");
-			}	
-			read_bytes += read_return;
-
-			file_filled = read_bytes/(double)(MAX_SHORT*2);
-			
 
 			/*
 				Do warunku wpisania danych do potoku, sprawdzam czy przypadkiem potok
@@ -130,7 +108,7 @@ int main(int argc, char ** argv){
 				Ponieważ w moim rozwiązaniu nie moge zastosować trybu nieblokujacego dla tego pipe,
 				to wysyłając na potok w każdej iteracji 64Ki bajtów, dojdzie do sytuacji, że potok
 				bedzie przepełniony, i program się zablokuje, dlatego dane wysyłam tylko wtedy, gdy
-				aktualna liczba danych w pipe + buffor jest < 64kbi	
+				aktualna liczba danych w pipe + buffor jest <= 64kbi	
 				Funkcja do odczytania ile danych oczekuje w buforze znaleziona na:
 				https://stackoverflow.com/questions/13377427/how-much-data-is-in-pipec
 			 */
@@ -158,7 +136,22 @@ int main(int argc, char ** argv){
 				close(writefd[1]);
 
 			}
+
+			/* Read data from childs and check if no error occurred */
+			if((read_return=readData(readfd[0], fd_file_success,record)) == -1){
+						errorExit("ERROR:Pipe is closed, cannot read");
+			}
+			else if(read_return == -2){
+				errorExit("ERROR:Cannot write to success file");
+			}	
+			read_bytes += read_return;
+
+			file_filled = read_bytes/(double)(MAX_SHORT*2);
 			
+			/* Check if read failed and no process terminated */
+			if(!returned_pid && !read_return ){
+				nsleep(0.48); 
+			}
 		}
 
 		

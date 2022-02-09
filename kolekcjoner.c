@@ -240,6 +240,8 @@ int checkStatus(int fd){
          */
         if(WEXITSTATUS(status) > 10 || file_filled >= 0.75)
             children_n--;
+
+
         numLiveChildren--;
 
     }

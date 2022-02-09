@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <time.h>
 #include <stdarg.h>
+#include <sys/ioctl.h>
 #define NANOSEC 1000000000L
 #define FL2NANOSEC(f) {(long)(f), ((f)-(long)(f))*NANOSEC}
 #define MAX_SHORT 65535
