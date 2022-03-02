@@ -1,50 +1,47 @@
-# programing_in_linux_uniproject
+# Program 1: Poszukwiacz
 
+The program takes one argument: a positive integer with an optionally added unit (Ki = 1024, Mi = 10242). It also requires that its standard input be pinned to a pipe file. (The condition must be verified at the start of the operation.)
 
-# Program 1: poszukiwacz
+The run argument specifies the number of 2-byte numbers to be read from standard input. For each number that appears for the first time, the program generates a record of the result which it sends to the standard output. The record is binary and consists of two fields: the number found and the PID of this process.
 
-Program przyjmuje jeden argument: liczbę całkowitą dodatnią z opcjonalnie dodaną jednostką (Ki=1024, Mi=10242). Ponadto wymaga, aby jego standardowe wejście było podpięte do pliku typu potok. (Warunek musi być zweryfikowany na początku działania.)
+After completing the search, the program exits with the status informing about the number of repetitions in the data:
 
-Argument uruchomienia określa ilość liczb 2-bajtowych, jakie mają być wczytywane ze standardowego wejścia. Dla każdej liczby, która pojawiła się po raz pierwszy, program generuje rekord wyniku, który wysyła na standardowe wyjście. Rekord jest binarny i składa się z dwóch pól: znalezionej liczby i PID tego procesu.
-
-Po zakończeniu przeszukiwania program kończy działanie ze statusem informującym o ilości powtórzeń w danych:
-
-    0 - brak powtórzeń,
-    1 - do 10% (włącznie),
-    2 - do 20% (włącznie),
+    0 - no repetitions,
+    1 - up to 10% (inclusive),
+    2 - up to 20% (inclusive),
     ...
 
-Jeżeli pojawiły się inne błędy (np. niepoprawne wywołanie), to zwracany status ma być większy od 10. 
+If there are other errors (e.g. incorrect calling), the returned status is to be greater than 10.
 
 
 
-# Program 2: kolekcjoner
+# Program 2: Kolekcjoner
 
-Program kolekcjoner zatrudnia poszukiwaczy do przeszukiwania danych. Znalazców pierwszych egzemplarzy honoruje przez wpisy do księgi pamiątkowej. Prowadzi również notatki dotyczące pracowników i „jakości” danych.
+The collector program employs seekers to search your data. Finders of the first copies are honored by entries in the guest book. It also keeps notes on employees and the "quality" of the data.
 
-Parametry uruchomienia
+Launch parameters
 
-    -d <źródło> - ścieżka do pliku z danymi do pobrania,
-    -s <wolumen> - liczba całkowita dodatnia, z opcjonalnie dodaną jednostką (Ki=1024, Mi=10242),
-    ilość danych do pobrania ze źródła,
-    -w <blok> - liczba całkowita dodatnia, z opcjonalnie dodaną jednostką (Ki=1024, Mi=10242),
-    ilość danych do przetworzenia przez każdego potomka,
-    -f <sukcesy> - ścieżka do plik do odnotowywania osiągnięć,
-    -l <raporty> - ścieżka do plik z raportami o potomkach,
-    -p <prac> - liczba całkowita dodatnia, maksymalna liczba potomków.
+    -d <source> - path to the file with data to be downloaded,
+    -s <volume> - positive integer, with an optionally added unit (Ki = 1024, Mi = 10242),
+    the amount of data to be downloaded from the source,
+    -w <block> - positive integer, with an optionally added unit (Ki = 1024, Mi = 10242),
+    the amount of data to be processed by each child,
+    -f <sukcesy> - path to the file for recording achievements,
+    -l <reports> - path to the file with child reports,
+    -p <prac> - positive integer, maximum number of children.
 
-Parametry <wolumen> i <blok> określiają ilość liczb 2-bajtowych. Czyli obszary o wielkości  2·<wolumen> (2·<blok>) bajtów.
-Działanie
+The <volume> and <block> parameters define the number of 2-byte numbers. So an area of ​​2 · <volume> (2 · <block>) bytes.
+Action
 
-Program tworzy <prac> potomków i do pewnego momentu pilnuje, by każdego, który zginął zastąpić nowym. (Nie dotyczy to przypadku, gdy potomki kończą działanie z powodu błędu.) Każdy potomek wykonuje program `poszukiwacz`, z parametrem o wartości <blok>.
-Do komunikacji z potomkami program używa dwóch potoków anonimowych, jednego do czytania, drugiego do pisania. Każdy utworzony potomek ma do tych potoków podpinane standardowe wejście i wyjście.
+The program creates <prac> descendants and, up to a certain point, makes sure that everyone who died is replaced with a new one. (This does not apply if the children exit with an error.) Each child executes the `finder` program with <block>.
+The program uses two anonymous pipes to communicate with descendants, one for reading and one for writing. Each child created has standard input and output connected to these pipes.
 
-Główny program kopiuje, z pliku wskazanego parametrem <źródło>, do potoku wyjściowego dane w ilości 2·<wolumnen> bajtów. Ponieważ taka operacja może się wymagać wielu podejść, to kolejne podejścia mają być wykonywane w przeplocie z pozostałymi działaniami.
-Pozostałe działania to: odczytywanie wyników dostarczanych przez potomków oraz odnotowywanie ich śmierci. Obie operacje mają być wykonywane w trybie nieblokującym i mogą powodować wykonanie dalszych operacji. Jeżeli obie operacje zakończyły się niepowodzeniem, to przed kolejnym obejściem cyklu należy wprowadzić opóźnienie długości 0,48 sekundy.
-Odczytywanie wyników
+The main program copies data of 2 · <volume> bytes from the file indicated by the <source> parameter to the output pipe. Since such an operation may require multiple approaches, subsequent approaches are to be performed intertwined with the rest of the activities.
+Other activities are: reading the results provided by descendants and recording their deaths. Both operations are to be performed in a non-blocking mode and may trigger further operations. If both operations have failed, enter a delay of 0.48 seconds before bypassing the cycle again.
+Reading the results
 
-Proces odczytuje po jednym rezultacie na raz, tj. po jednej strukturze, opisanej w specyfikacji programu poszukiwacz. Na podstawie jej zawartości modyfikuje plik osiągnięć w taki sposób, że w komórce określonej pierwszą wartością w strukturze, wpisuje numer PID z drugiej pozycji. Uwagi. Zawartość pliku należy interpretować jako tablicę komórek o rozmiarach odpowiadających typowi pid_t. Komórki, które nie miały wpisanej wartości, mają zawierać 0. Raz zapisana komórka nie może być już więcej modyfikowana.
-Odczytywanie statusów zadań i nowe potomki
+The process reads one result at a time, i.e. one structure as described in the finder specification. Based on its content, it modifies the achievements file in such a way that in the cell specified with the first value in the structure, it enters the PID number from the second position. Remarks. The contents of the file should be interpreted as an array of cells with sizes corresponding to the pid_t type. Cells that did not have a value entered should contain 0. Once a cell is saved, it cannot be modified anymore.
+Reading task statuses and new children
 
-Status zadania ma być odczytany możliwie najszybciej po jego zakończeniu. Do momentu, aż plik z osiągnięciami nie zostanie wypełniony w 75%, za każdego zakończonego potomka generowany jest nowy. Wyjątek stanowi zakończenie z innych powodów niż „naturalne” (status powyżej 10).
-Informacje o zdarzeniach związanych z potomkami mają być odnotowywane w pliku logów. Każdy wpisy ma zawierać: odczyt zegara MONOTONIC, rodzaj zdarzenia (zakończenie lub utworzenie) oraz PID procesu, którego dotyczy. 
+The status of the task is to be read as soon as possible after its completion. Until the achievement file is 75% complete, a new one is generated for each completed child. The exception is termination for reasons other than "natural" (status above 10).
+Information about child-related events is to be recorded in the log file. Each entry is to contain: reading the MONOTONIC clock, the type of event (ending or creation) and the PID of the process it concerns. 
